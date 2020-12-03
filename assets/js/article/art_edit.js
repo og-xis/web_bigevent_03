@@ -1,4 +1,29 @@
 $(function () {
+    function initForm() {
+        var id = location.search.split('=')[1]
+        $.ajax({
+            method: 'GET',
+            url: '/my/article/' + id,
+            success: function (res) {
+                if (res.status !== 0) {
+                    return layer.msg(res.message)
+                }
+                form.val('form-edit', res.data)
+                tinyMCE.activeEditor.setContent(res.data.content);
+                if (!res.data.cover_img) {
+                    return layer.msg('用户未上传头像')
+                }
+                // 根据选择的文件，创建一个对应的 URL 地址：
+                var newImgURL = baseURL + res.data.cover_img
+                // 先销毁旧的裁剪区域，再重新设置图片路径，之后再创建新的裁剪区域：
+                $image
+                    .cropper('destroy') // 销毁旧的裁剪区域
+                    .attr('src', newImgURL) // 重新设置图片路径
+                    .cropper(options) // 重新初始化裁剪区域
+            }
+        })
+    }
+
     var form = layui.form
     var layer = layui.layer
     initCate()
@@ -14,6 +39,7 @@ $(function () {
                 var htmlStr = template('tpl-art-pub', res)
                 $('[name=cate_pub]').html(htmlStr)
                 form.render()
+                initForm()
             }
         })
     }
@@ -54,8 +80,8 @@ $(function () {
     })
     $('#form-pub').on('submit', function (e) {
         e.preventDefault()
-        var fd=new FormData(this)
-        fd.append('state',state)
+        var fd = new FormData(this)
+        fd.append('state', state)
         $image
             .cropper('getCroppedCanvas', { // 创建一个 Canvas 画布
                 width: 400,
@@ -63,24 +89,25 @@ $(function () {
             })
             .toBlob(function (blob) { // 将 Canvas 画布上的内容，转化为文件对象
                 // 得到文件对象后，进行后续的操作
-                fd.append('cover_img',blob)
+                fd.append('cover_img', blob)
                 // console.log(...fd);
                 publishArticle(fd)
             })
     })
-    function publishArticle(fd){
+        // 封装添加文章的方法
+    function publishArticle(fd) {
         $.ajax({
-            method:'POST',
-            url:'/my/article/add',
-            data:fd,
-            contentType:false,
-            processData:false,
-            success:function(res){
-                if(res.status!==0){
+            method: 'POST',
+            url: '/my/article/edit',
+            data: fd,
+            contentType: false,
+            processData: false,
+            success: function (res) {
+                if (res.status !== 0) {
                     return layer.msg(res.message)
                 }
-                layer.msg('发布文章成功')
-                // location.href='/article/art_list.html'
+                layer.msg('修改文章成功')
+                // location.href = '/article/art_list.html'
                 setTimeout(function(){
                     
                     window.parent.document.getElementById('art_list').click()
@@ -88,4 +115,7 @@ $(function () {
             }
         })
     }
+
+
+   
 })
